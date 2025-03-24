@@ -1,7 +1,12 @@
 import os
 import sqlite3
+import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+
+# Nastavi beleženje
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Povezava z bazo podatkov za sledenje točkam
 conn = sqlite3.connect('catnip.db')
@@ -11,6 +16,7 @@ conn.commit()
 
 # Funkcija za začetek igre
 async def start(update: Update, context: CallbackContext):
+    logger.info(f"Received /start command from user {update.message.from_user.id}")
     user = update.message.from_user
     user_id = user.id
     username = user.username or user.first_name
@@ -26,6 +32,7 @@ async def start(update: Update, context: CallbackContext):
 
 # Funkcija za prikaz nalog
 async def tasks(update: Update, context: CallbackContext):
+    logger.info(f"Received /tasks command from user {update.message.from_user.id}")
     await update.message.reply_text(
         "Here’s how you can earn catnip 🌿:\n"
         "1️⃣ Buy $COSCAT (0.05 SOL or more) on Pump.fun and send a screenshot here: +50 catnip\n"
@@ -36,6 +43,7 @@ async def tasks(update: Update, context: CallbackContext):
 
 # Funkcija za preverjanje točk
 async def score(update: Update, context: CallbackContext):
+    logger.info(f"Received /score command from user {update.message.from_user.id}")
     user_id = update.message.from_user.id
     c.execute("SELECT catnip FROM players WHERE user_id = ?", (user_id,))
     result = c.fetchone()
@@ -44,6 +52,7 @@ async def score(update: Update, context: CallbackContext):
 
 # Funkcija za obdelavo dokazil (slike, besedilo, povezave)
 async def handle_proof(update: Update, context: CallbackContext):
+    logger.info(f"Received proof from user {update.message.from_user.id}")
     user_id = update.message.from_user.id
     username = update.message.from_user.username or update.message.from_user.first_name
     
@@ -65,6 +74,7 @@ async def handle_proof(update: Update, context: CallbackContext):
 
 # Funkcija za ročno dodajanje točk (za admina)
 async def addcatnip(update: Update, context: CallbackContext):
+    logger.info(f"Received /addcatnip command from user {update.message.from_user.id}")
     if update.message.from_user.id != int(os.getenv("ADMIN_ID")):
         return
     try:
@@ -79,6 +89,7 @@ async def addcatnip(update: Update, context: CallbackContext):
 
 # Funkcija za zbiranje naslovov denarnic (neobvezno, če si dodal /submitwallet)
 async def submitwallet(update: Update, context: CallbackContext):
+    logger.info(f"Received /submitwallet command from user {update.message.from_user.id}")
     user_id = update.message.from_user.id
     username = update.message.from_user.username or update.message.from_user.first_name
     await update.message.reply_text(
@@ -86,6 +97,7 @@ async def submitwallet(update: Update, context: CallbackContext):
     )
 
 async def handle_wallet(update: Update, context: CallbackContext):
+    logger.info(f"Received wallet address from user {update.message.from_user.id}")
     user_id = update.message.from_user.id
     username = update.message.from_user.username or update.message.from_user.first_name
     wallet_address = update.message.text
@@ -115,11 +127,15 @@ def main():
     app.add_handler(CommandHandler("submitwallet", submitwallet))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex('^(https?://)'), handle_wallet))
 
-    # Začni bot-a
-    print("Bot is running...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    # Nastavi webhook
+    logger.info("Setting webhook...")
+    webhook_url = f"https://minka-catnip-bot.onrender.com/{os.getenv('BOT_TOKEN')}"
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=int(os.getenv("PORT", 10000)),  # Uporabi port, ki ga določi Render
+        url_path=os.getenv("BOT_TOKEN"),
+        webhook_url=webhook_url
+    )
 
 if __name__ == '__main__':
     main()
-
-
