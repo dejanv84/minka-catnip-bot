@@ -80,7 +80,7 @@ async def addcatnip(update: Update, context: CallbackContext):
 # Glavna funkcija
 def main():
     # Ustvari aplikacijo z BotFather tokenom
-    app = Application.builder().token(os.getenv("8018248459:AAGvQWJJ9EbGbVEiyffWcWLQXNi2W_KYhQ0").build()  # Zamenjaj z BotFather tokenom
+    app = Application.builder().token(os.getenv("8018248459:AAGvQWJJ9EbGbVEiyffWcWLQXNi2W_KYhQ0")).build()  # Zamenjaj z BotFather tokenom
 
     # Dodaj handlerje
     app.add_handler(CommandHandler("start", start))
