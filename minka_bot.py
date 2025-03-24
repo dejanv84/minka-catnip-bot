@@ -54,7 +54,7 @@ async def handle_proof(update: Update, context: CallbackContext):
     
     # Obvesti admina (tebe) o novem dokazilu
     proof_message = f"New proof from {username} (ID: {user_id}):"
-    await context.bot.send_message(chat_id=int(os.getenv("899820232")), text=proof_message)  # Zamenjaj z tvojim Telegram ID-jem
+    await context.bot.send_message(chat_id=int(os.getenv("899820232")), text=proof_message)
     
     # Če je dokazilo slika
     if update.message.photo:
@@ -65,7 +65,7 @@ async def handle_proof(update: Update, context: CallbackContext):
 
 # Funkcija za ročno dodajanje točk (za admina)
 async def addcatnip(update: Update, context: CallbackContext):
-    if update.message.from_user.id != int(os.getenv("899820232")):  # Zamenjaj z ID-jem admina (tvoj ID)
+    if update.message.from_user.id != int(os.getenv("899820232")):
         return
     try:
         user_id = int(context.args[0])
@@ -77,10 +77,32 @@ async def addcatnip(update: Update, context: CallbackContext):
     except:
         await update.message.reply_text("Usage: /addcatnip <user_id> <amount>")
 
+# Funkcija za zbiranje naslovov denarnic (neobvezno, če si dodal /submitwallet)
+async def submitwallet(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username or update.message.from_user.first_name
+    await update.message.reply_text(
+        "Please send your Solana wallet address to receive your $COSCAT rewards."
+    )
+
+async def handle_wallet(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username or update.message.from_user.first_name
+    wallet_address = update.message.text
+    
+    # Obvesti admina o naslovu denarnice
+    await context.bot.send_message(
+        chat_id=int(os.getenv("899820232")),
+        text=f"New wallet address from {username} (ID: {user_id}):\n{wallet_address}"
+    )
+    await update.message.reply_text(
+        f"Thanks, {username}! Your wallet address has been submitted. You’ll receive your $COSCAT rewards soon."
+    )
+
 # Glavna funkcija
 def main():
     # Ustvari aplikacijo z BotFather tokenom
-    app = Application.builder().token(os.getenv("8018248459:AAGvQWJJ9EbGbVEiyffWcWLQXNi2W_KYhQ0")).build()  # Zamenjaj z BotFather tokenom
+    app = Application.builder().token(os.getenv("8018248459:AAGvQWJJ9EbGbVEiyffWcWLQXNi2W_KYhQ0")).build()
 
     # Dodaj handlerje
     app.add_handler(CommandHandler("start", start))
@@ -89,6 +111,9 @@ def main():
     app.add_handler(CommandHandler("addcatnip", addcatnip))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_proof))
     app.add_handler(MessageHandler(filters.PHOTO, handle_proof))
+    # Neobvezno: handlerji za /submitwallet
+    app.add_handler(CommandHandler("submitwallet", submitwallet))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex('^(https?://)'), handle_wallet))
 
     # Začni bot-a
     print("Bot is running...")
