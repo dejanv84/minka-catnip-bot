@@ -1,10 +1,9 @@
 import os
 import sqlite3
 import logging
+import json
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
-from telegram.ext._utils.webhookhandler import WebhookServer
-from telegram.ext._application import Application
 
 # Nastavi beleženje
 logging.basicConfig(level=logging.INFO)
@@ -151,17 +150,32 @@ async def application(scope, receive, send):
                 body += message.get('body', b'')
                 if message.get('more_body', False) is False:
                     break
-            update = Update.de_json(body.decode('utf-8'), app.bot)
-            await app.process_update(update)
-            await send({
-                'type': 'http.response.start',
-                'status': 200,
-                'headers': [[b'content-type', b'text/plain']],
-            })
-            await send({
-                'type': 'http.response.body',
-                'body': b'OK',
-            })
+            # Dekodiraj telo in pretvori v slovar
+            try:
+                data = json.loads(body.decode('utf-8'))
+                update = Update.de_json(data, app.bot)
+                if update:
+                    await app.process_update(update)
+                await send({
+                    'type': 'http.response.start',
+                    'status': 200,
+                    'headers': [[b'content-type', b'text/plain']],
+                })
+                await send({
+                    'type': 'http.response.body',
+                    'body': b'OK',
+                })
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to decode JSON: {e}")
+                await send({
+                    'type': 'http.response.start',
+                    'status': 400,
+                    'headers': [[b'content-type', b'text/plain']],
+                })
+                await send({
+                    'type': 'http.response.body',
+                    'body': b'Bad Request: Invalid JSON',
+                })
         else:
             await send({
                 'type': 'http.response.start',
