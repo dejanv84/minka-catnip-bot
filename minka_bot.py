@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
@@ -53,18 +54,18 @@ async def handle_proof(update: Update, context: CallbackContext):
     
     # Obvesti admina (tebe) o novem dokazilu
     proof_message = f"New proof from {username} (ID: {user_id}):"
-    await context.bot.send_message(chat_id=899820232, text=proof_message)  # Zamenjaj z tvojim Telegram ID-jem
+    await context.bot.send_message(chat_id=int(os.getenv("899820232")), text=proof_message)  # Zamenjaj z tvojim Telegram ID-jem
     
     # Če je dokazilo slika
     if update.message.photo:
-        await context.bot.send_photo(chat_id=899820232, photo=update.message.photo[-1].file_id)
+        await context.bot.send_photo(chat_id=int(os.getenv("899820232")), photo=update.message.photo[-1].file_id)
     # Če je dokazilo besedilo ali povezava
     elif update.message.text:
-        await context.bot.send_message(chat_id=899820232, text=update.message.text)
+        await context.bot.send_message(chat_id=int(os.getenv("899820232")), text=update.message.text)
 
 # Funkcija za ročno dodajanje točk (za admina)
 async def addcatnip(update: Update, context: CallbackContext):
-    if update.message.from_user.id != 899820232:  # Zamenjaj z ID-jem admina (tvoj ID)
+    if update.message.from_user.id != int(os.getenv("899820232")):  # Zamenjaj z ID-jem admina (tvoj ID)
         return
     try:
         user_id = int(context.args[0])
@@ -79,7 +80,7 @@ async def addcatnip(update: Update, context: CallbackContext):
 # Glavna funkcija
 def main():
     # Ustvari aplikacijo z BotFather tokenom
-    app = Application.builder().token("8018248459:AAGvQWJJ9EbGbVEiyffWcWLQXNi2W_KYhQ0").build()  # Zamenjaj z BotFather tokenom
+    app = Application.builder().token(os.getenv("8018248459:AAGvQWJJ9EbGbVEiyffWcWLQXNi2W_KYhQ0").build()  # Zamenjaj z BotFather tokenom
 
     # Dodaj handlerje
     app.add_handler(CommandHandler("start", start))
