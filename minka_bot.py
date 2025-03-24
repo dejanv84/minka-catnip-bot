@@ -54,18 +54,18 @@ async def handle_proof(update: Update, context: CallbackContext):
     
     # Obvesti admina (tebe) o novem dokazilu
     proof_message = f"New proof from {username} (ID: {user_id}):"
-    await context.bot.send_message(chat_id=int(os.getenv("899820232")), text=proof_message)
+    await context.bot.send_message(chat_id=int(os.getenv("ADMIN_ID")), text=proof_message)
     
     # Če je dokazilo slika
     if update.message.photo:
-        await context.bot.send_photo(chat_id=int(os.getenv("899820232")), photo=update.message.photo[-1].file_id)
+        await context.bot.send_photo(chat_id=int(os.getenv("ADMIN_ID")), photo=update.message.photo[-1].file_id)
     # Če je dokazilo besedilo ali povezava
     elif update.message.text:
-        await context.bot.send_message(chat_id=int(os.getenv("899820232")), text=update.message.text)
+        await context.bot.send_message(chat_id=int(os.getenv("ADMIN_ID")), text=update.message.text)
 
 # Funkcija za ročno dodajanje točk (za admina)
 async def addcatnip(update: Update, context: CallbackContext):
-    if update.message.from_user.id != int(os.getenv("899820232")):
+    if update.message.from_user.id != int(os.getenv("ADMIN_ID")):
         return
     try:
         user_id = int(context.args[0])
@@ -92,7 +92,7 @@ async def handle_wallet(update: Update, context: CallbackContext):
     
     # Obvesti admina o naslovu denarnice
     await context.bot.send_message(
-        chat_id=int(os.getenv("899820232")),
+        chat_id=int(os.getenv("ADMIN_ID")),
         text=f"New wallet address from {username} (ID: {user_id}):\n{wallet_address}"
     )
     await update.message.reply_text(
@@ -102,7 +102,7 @@ async def handle_wallet(update: Update, context: CallbackContext):
 # Glavna funkcija
 def main():
     # Ustvari aplikacijo z BotFather tokenom
-    app = Application.builder().token(os.getenv("8018248459:AAGvQWJJ9EbGbVEiyffWcWLQXNi2W_KYhQ0")).build()
+    app = Application.builder().token(os.getenv("BOT_TOKEN")).build()
 
     # Dodaj handlerje
     app.add_handler(CommandHandler("start", start))
