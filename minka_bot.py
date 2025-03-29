@@ -9,12 +9,6 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Povezava z bazo podatkov za sledenje točkam
-conn = sqlite3.connect('catnip.db')
-c = conn.cursor()
-c.execute('''CREATE TABLE IF NOT EXISTS players (user_id INTEGER PRIMARY KEY, username TEXT, catnip INTEGER)''')
-conn.commit()
-
 # Funkcija za začetek igre
 async def start(update: Update, context: CallbackContext):
     logger.info(f"Received /start command from user {update.message.from_user.id}")
@@ -22,8 +16,13 @@ async def start(update: Update, context: CallbackContext):
     user_id = user.id
     username = user.username or user.first_name
     
-    c.execute("INSERT OR IGNORE INTO players (user_id, username, catnip) VALUES (?, ?, ?)", (user_id, username, 0))
-    conn.commit()
+    # Vzpostavi povezavo z bazo znotraj funkcije
+    with sqlite3.connect('catnip.db') as conn:
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS players (user_id INTEGER PRIMARY KEY, username TEXT, catnip INTEGER)''')
+        c.execute("INSERT OR IGNORE INTO players (user_id, username, catnip) VALUES (?, ?, ?)", (user_id, username, 0))
+        conn.commit()
+        logger.info(f"Inserted or ignored user {user_id} into database")
     
     await update.message.reply_text(
         f"Meow meow, {username}! 🐾 I’m Minka, the cosmic kitty, and I need your help to get to Mars! 🚀\n"
@@ -46,9 +45,15 @@ async def tasks(update: Update, context: CallbackContext):
 async def score(update: Update, context: CallbackContext):
     logger.info(f"Received /score command from user {update.message.from_user.id}")
     user_id = update.message.from_user.id
-    c.execute("SELECT catnip FROM players WHERE user_id = ?", (user_id,))
-    result = c.fetchone()
-    catnip = result[0] if result else 0
+    
+    # Vzpostavi povezavo z bazo znotraj funkcije
+    with sqlite3.connect('catnip.db') as conn:
+        c = conn.cursor()
+        c.execute("SELECT catnip FROM players WHERE user_id = ?", (user_id,))
+        result = c.fetchone()
+        logger.info(f"Query result for user {user_id}: {result}")
+        catnip = result[0] if result else 0
+    
     await update.message.reply_text(f"Meow meow! 🐾 You have {catnip} catnip 🌿.")
 
 # Funkcija za obdelavo dokazil (slike, besedilo, povezave)
@@ -77,15 +82,30 @@ async def handle_proof(update: Update, context: CallbackContext):
 async def addcatnip(update: Update, context: CallbackContext):
     logger.info(f"Received /addcatnip command from user {update.message.from_user.id}")
     if update.message.from_user.id != int(os.getenv("ADMIN_ID")):
+        logger.warning(f"Unauthorized /addcatnip attempt by user {update.message.from_user.id}")
         return
     try:
         user_id = int(context.args[0])
         amount = int(context.args[1])
-        c.execute("UPDATE players SET catnip = catnip + ? WHERE user_id = ?", (amount, user_id))
-        conn.commit()
+        
+        # Vzpostavi povezavo z bazo znotraj funkcije
+        with sqlite3.connect('catnip.db') as conn:
+            c = conn.cursor()
+            c.execute("UPDATE players SET catnip = catnip + ? WHERE user_id = ?", (amount, user_id))
+            conn.commit()
+            logger.info(f"Added {amount} catnip to user {user_id}")
+        
+        # Preveri, ali so točke res posodobljene
+        with sqlite3.connect('catnip.db') as conn:
+            c = conn.cursor()
+            c.execute("SELECT catnip FROM players WHERE user_id = ?", (user_id,))
+            updated_result = c.fetchone()
+            logger.info(f"Updated catnip for user {user_id}: {updated_result}")
+        
         await context.bot.send_message(chat_id=user_id, text=f"Meow meow! 🐾 You’ve earned {amount} catnip 🌿. Check your score with /score.")
         await update.message.reply_text(f"Added {amount} catnip to user {user_id}!")
-    except:
+    except Exception as e:
+        logger.error(f"Error in /addcatnip: {e}")
         await update.message.reply_text("Usage: /addcatnip <user_id> <amount>")
 
 # Funkcija za zbiranje naslovov denarnic (neobvezno, če si dodal /submitwallet)
